@@ -1,0 +1,26 @@
+.contactForm {
+  border: 1px solid black;
+  max-width: 300px;
+  border-radius: 10px;
+  padding: 15px;
+}
+
+.contactFormContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.formInput {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+form input {
+  padding: 5px;
+  border-radius: 5px;
+}
+
+.formButton {
+  align-self: center;
+}
