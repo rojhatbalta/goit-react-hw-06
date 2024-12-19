@@ -1,6 +1,8 @@
 import { Formik, Form, Field, ErrorMessage } from "formik";
-import { nanoid } from "nanoid";
 import * as Yup from "yup";
+import { useDispatch, useSelector } from "react-redux";
+import { addContact } from "../../redux/contactSlice";
+import { useCallback } from "react";
 import PropTypes from "prop-types";
 import Style from "./ContactForm.module.css";
 
@@ -16,30 +18,46 @@ const addContactSchema = Yup.object().shape({
     .required("Required"),
 });
 
-function handleNumChange(e, setFieldValue) {
-  const { value } = e.target;
-
-  const formattedValue = value
-    .replace(/(\d{3})(\d{2})(\d{2})?/, "$1-$2-$3")
-    .trim();
-
-  setFieldValue("number", formattedValue);
+function ValidationError({ message }) {
+  return <span style={{ color: "red", fontSize: "12px" }}>{message}</span>;
 }
 
-const initialValues = {
-  name: "",
-  number: "",
+ValidationError.propTypes = {
+  message: PropTypes.string.isRequired,
 };
 
-export default function ContactForm({ onAddContact }) {
-  const handleSubmit = (values, actions) => {
-    const newContact = {
-      id: nanoid(),
-      name: values.name,
-      number: values.number,
-    };
-    onAddContact(newContact);
-    actions.resetForm();
+export default function ContactForm() {
+  const dispatch = useDispatch();
+  const contacts = useSelector((state) => state.contacts.items);
+  const initialValues = {
+    name: "",
+    number: "",
+  };
+
+  const handleNumChange = useCallback((e, setFieldValue) => {
+    const { value } = e.target;
+    const formattedValue = value
+      .replace(/[^\d]/g, "")
+      .replace(/(\d{3})(\d{2})(\d{2})/, "$1-$2-$3");
+    setFieldValue("number", formattedValue);
+  }, []);
+
+  const handleSubmit = (values, { resetForm }) => {
+    const isDuplicate = contacts.some(
+      (contact) =>
+        contact.name.trim().toLowerCase() ===
+          values.name.trim().toLowerCase() || contact.number === values.number
+    );
+
+    if (isDuplicate) {
+      alert(
+        `This contact already exists! Name: ${values.name}, Number: ${values.number}`
+      );
+      return;
+    }
+
+    dispatch(addContact(values));
+    resetForm();
   };
 
   return (
@@ -48,13 +66,13 @@ export default function ContactForm({ onAddContact }) {
       onSubmit={handleSubmit}
       validationSchema={addContactSchema}
     >
-      {({ setFieldValue }) => (
+      {({ setFieldValue, isValid, dirty }) => (
         <Form className={Style.contactForm}>
           <div className={Style.contactFormContainer}>
             <div className={Style.formInput}>
               <label htmlFor="name">Name</label>
               <Field type="text" name="name" id="name" placeholder="Name" />
-              <ErrorMessage name="name" component="span" />
+              <ErrorMessage name="name" component={ValidationError} />
             </div>
             <div className={Style.formInput}>
               <label htmlFor="number">Number</label>
@@ -65,9 +83,13 @@ export default function ContactForm({ onAddContact }) {
                 placeholder="000-00-00"
                 onChange={(event) => handleNumChange(event, setFieldValue)}
               />
-              <ErrorMessage name="number" component="span" />
+              <ErrorMessage name="number" component={ValidationError} />
             </div>
-            <button type="submit" className={Style.formButton}>
+            <button
+              type="submit"
+              className={Style.formButton}
+              disabled={!isValid || !dirty}
+            >
               Add Contact
             </button>
           </div>
@@ -76,7 +98,3 @@ export default function ContactForm({ onAddContact }) {
     </Formik>
   );
 }
-
-ContactForm.propTypes = {
-  onAddContact: PropTypes.func.isRequired,
-};
